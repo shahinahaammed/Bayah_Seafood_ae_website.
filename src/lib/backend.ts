@@ -104,17 +104,43 @@ export async function uploadMenuImage(file: File, oldImageUrl?: string) {
   const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const path = `menu/${crypto.randomUUID()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(MENU_IMAGE_BUCKET)
-    .upload(path, file, {
-      cacheControl: "31536000",
-      contentType: file.type,
-      upsert: false,
-    });
+  // Bypassing supabase.storage's SDK methods here deliberately: they go
+  // through the same client machinery that caused a "Converting circular
+  // structure to JSON" crash for order creation. Plain fetch() against
+  // Supabase Storage's REST API sidesteps that entirely.
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    throw new Error("You must be logged in as an admin to upload images.");
+  }
 
-  if (uploadError) throw uploadError;
+  const uploadResponse = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${MENU_IMAGE_BUCKET}/${path}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": file.type,
+        "x-upsert": "false",
+        "cache-control": "31536000",
+      },
+      body: file,
+    }
+  );
 
-  const { data } = supabase.storage.from(MENU_IMAGE_BUCKET).getPublicUrl(path);
+  if (!uploadResponse.ok) {
+    let message = `Image upload failed (${uploadResponse.status}).`;
+    try {
+      const errBody = await uploadResponse.json();
+      if (errBody?.message) message = errBody.message;
+    } catch {
+      // response wasn't JSON — keep the generic status-based message
+    }
+    throw new Error(message);
+  }
+
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${MENU_IMAGE_BUCKET}/${path}`;
 
   // Remove the previous uploaded image when it belongs to our bucket.
   if (oldImageUrl) {
@@ -123,12 +149,20 @@ export async function uploadMenuImage(file: File, oldImageUrl?: string) {
     if (markerIndex !== -1) {
       const oldPath = oldImageUrl.slice(markerIndex + marker.length).split("?")[0];
       if (oldPath) {
-        await supabase.storage.from(MENU_IMAGE_BUCKET).remove([oldPath]);
+        await fetch(`${SUPABASE_URL}/storage/v1/object/${MENU_IMAGE_BUCKET}/${oldPath}`, {
+          method: "DELETE",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }).catch(() => {
+          // best-effort cleanup — don't fail the upload if this fails
+        });
       }
     }
   }
 
-  return data.publicUrl;
+  return publicUrl;
 }
 
 export async function upsertMenu(items: MenuItem[]) {
