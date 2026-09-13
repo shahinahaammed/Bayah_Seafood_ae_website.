@@ -33,3 +33,25 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+
+## Printed Menu Update
+
+The online menu in `src/data/site.ts` now follows the Bayah Seafood printed menu supplied on 13 Sep 2026:
+- Seafood Platters
+- Bayah Specials & Meals
+- Fish & Seafood Meals
+- Soups & Salads
+- Starters
+- Seafood Noodles
+- Rice
+- Refreshments
+
+The two supplied printed-menu images are available at:
+- `/menu/bayah-menu-page-1.jpg`
+- `/menu/bayah-menu-page-2.jpg`
+
+The Menu page includes a **View Printed Menu** button.
+
+### Supabase
+If the live `menu_items` table still contains the previous sample menu, run `supabase/printed_menu_seed.sql` once in the Supabase SQL Editor. It replaces only rows in `public.menu_items`; orders and customer data are not changed.
