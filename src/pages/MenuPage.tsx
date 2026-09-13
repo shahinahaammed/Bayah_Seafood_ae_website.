@@ -113,7 +113,7 @@ export default function MenuPage({ menuItems, cart, addToCart, incItem, decItem,
       <div className="tw-menu-layout" style={{ maxWidth: 1180, margin: "0 auto", padding: "0 20px 100px", display: "grid", gridTemplateColumns: "230px 1fr", gap: 40, alignItems: "start" }}>
         {/* desktop sidebar */}
         <nav className="tw-cat-sidebar" style={{ background: "#fff", border: `1.5px solid ${T.line}`, borderRadius: 14, padding: 10, position: "sticky", top: 96 }}>
-          {CATEGORIES.map((c) => {
+          {categories.map((c) => {
             const active = currentActiveCat === c.id && !searching;
             return (
               <button key={c.id} onClick={() => { setActiveCat(c.id); setQuery(""); }} style={{
