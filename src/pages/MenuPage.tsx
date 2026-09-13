@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ShoppingCart, Minus, Plus, Search } from "lucide-react";
-import { T, CATEGORIES } from "../data/site";
+import { T, CATEGORIES, menuCategories } from "../data/site";
 import { SeaIcon, WaveDivider, Pill, Button, StepIndicator, inputStyle, stepperBtn } from "../components/ui";
 import { money, orderTypeLabel } from "../utils/helpers";
 import type { Cart, MenuItem, OrderType } from "../types";
@@ -71,12 +71,14 @@ interface MenuPageProps {
 export default function MenuPage({ menuItems, cart, addToCart, incItem, decItem, orderType, goCart, cartTotal, cartCount, step }: MenuPageProps) {
   const [activeCat, setActiveCat] = useState(CATEGORIES[0].id);
   const [query, setQuery] = useState("");
+  const categories = menuItems.length ? menuCategories(menuItems) : CATEGORIES;
+  const currentActiveCat = categories.some((c) => c.id === activeCat) ? activeCat : (categories[0]?.id ?? CATEGORIES[0].id);
 
   const searching = query.trim() !== "";
   const filtered = menuItems.filter((m) =>
-    searching ? m.name.toLowerCase().includes(query.toLowerCase()) : m.category === activeCat
+    searching ? m.name.toLowerCase().includes(query.toLowerCase()) : m.category === currentActiveCat
   );
-  const activeCategory = CATEGORIES.find((c) => c.id === activeCat);
+  const activeCategory = categories.find((c) => c.id === currentActiveCat);
   const countFor = (id: string) => menuItems.filter((m) => m.category === id).length;
 
   return (
@@ -96,7 +98,7 @@ export default function MenuPage({ menuItems, cart, addToCart, incItem, decItem,
 
         {/* mobile category chips */}
         <div className="tw-cat-chips" style={{ gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 6 }}>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button key={c.id} onClick={() => { setActiveCat(c.id); setQuery(""); }} style={{
               flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 22,
               border: `1.5px solid ${activeCat === c.id && !searching ? T.ink : T.line}`, background: activeCat === c.id && !searching ? T.ink : "#fff",
@@ -112,7 +114,7 @@ export default function MenuPage({ menuItems, cart, addToCart, incItem, decItem,
         {/* desktop sidebar */}
         <nav className="tw-cat-sidebar" style={{ background: "#fff", border: `1.5px solid ${T.line}`, borderRadius: 14, padding: 10, position: "sticky", top: 96 }}>
           {CATEGORIES.map((c) => {
-            const active = activeCat === c.id && !searching;
+            const active = currentActiveCat === c.id && !searching;
             return (
               <button key={c.id} onClick={() => { setActiveCat(c.id); setQuery(""); }} style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9,

@@ -1,4 +1,4 @@
-import type { Category, MenuItem, OrderStatus } from "../types";
+import type { Category, MenuItem, OrderStatus, IconType } from "../types";
 
 export const T = {
   ink: "#171717",
@@ -32,6 +32,57 @@ export const CATEGORIES: Category[] = [
   { id: "drinks", label: "Drinks", icon: "cup" },
   { id: "desserts", label: "Desserts", icon: "dessert" },
 ];
+
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "fish-meals": "Fish & Seafood Meals",
+  "platters": "Seafood Platters",
+  "noodles": "Seafood Noodles",
+  "rice": "Rice",
+  "refreshments": "Refreshments",
+  "soups-salads": "Soups & Salads",
+  "bayah-specials": "Bayah Specials & Meals",
+};
+
+export function categoryLabel(id: string): string {
+  if (CATEGORY_LABELS[id]) return CATEGORY_LABELS[id];
+  const known = CATEGORIES.find((c) => c.id === id);
+  if (known) return known.label;
+  return id
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function menuCategories(items: MenuItem[]): Category[] {
+  const ids = Array.from(new Set(items.map((item) => item.category).filter(Boolean)));
+  const preferred = [
+    "platters",
+    "bayah-specials",
+    "fish-meals",
+    "soups-salads",
+    "soups",
+    "starters",
+    "noodles",
+    "rice",
+    "refreshments",
+    "drinks",
+    "desserts",
+  ];
+  ids.sort((a, b) => {
+    const ai = preferred.indexOf(a);
+    const bi = preferred.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return categoryLabel(a).localeCompare(categoryLabel(b));
+  });
+
+  return ids.map((id) => {
+    const known = CATEGORIES.find((c) => c.id === id);
+    const icon: IconType = known?.icon ?? (id.includes("prawn") ? "prawn" : id.includes("crab") ? "crab" : id.includes("lobster") ? "lobster" : id.includes("squid") ? "squid" : id.includes("drink") || id.includes("refresh") ? "cup" : id.includes("dessert") ? "dessert" : "plate");
+    return { id, label: categoryLabel(id), icon };
+  });
+}
 
 export const SEED_MENU: MenuItem[] = [
   { id: "m1", category: "fresh-fish", name: "Grilled Hammour Fillet", desc: "Whole hammour fillet, chargrilled with lemon and herbs.", price: 68, popular: true, available: true },

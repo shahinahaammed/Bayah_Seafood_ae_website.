@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Pencil, Trash2, PlusCircle } from "lucide-react";
-import { T, CATEGORIES } from "../data/site";
+import { T, CATEGORIES, menuCategories } from "../data/site";
 import { SeaIcon, Pill, Button, Field, FilterChip, inputStyle } from "../components/ui";
 import { money } from "../utils/helpers";
 import { uploadMenuImage } from "../lib/backend";
@@ -34,6 +34,7 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
   const [filterCat, setFilterCat] = useState("all");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState("");
+  const categories = menuItems.length ? menuCategories(menuItems) : CATEGORIES;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startAdd = () => { setForm(emptyItemForm()); setEditing(true); };
@@ -84,7 +85,7 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
           <FilterChip active={filterCat === "all"} onClick={() => setFilterCat("all")}>All ({menuItems.length})</FilterChip>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <FilterChip key={c.id} active={filterCat === c.id} onClick={() => setFilterCat(c.id)}>{c.label}</FilterChip>
           ))}
         </div>
@@ -98,7 +99,7 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
             <Field label="Food name"><input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Grilled King Fish" /></Field>
             <Field label="Category">
               <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </Field>
           </div>
@@ -161,7 +162,7 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
         {visible.map((item, i) => (
           <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: i < visible.length - 1 ? `1px solid ${T.line}` : "none", flexWrap: "wrap" }}>
             <div style={{ width: 40, height: 40, borderRadius: 9, background: T.tideLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <SeaIcon type={CATEGORIES.find((c) => c.id === item.category)?.icon} size={20} color={T.tide} />
+              <SeaIcon type={menuCategories([item])[0]?.icon} size={20} color={T.tide} />
             </div>
             <div style={{ flex: 1, minWidth: 160 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -169,7 +170,7 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
                 {item.popular && <Pill tone="brass">Popular</Pill>}
                 {!item.available && <Pill tone="coral">Unavailable</Pill>}
               </div>
-              <div style={{ fontSize: 12.5, color: T.ink60 }}>{CATEGORIES.find((c) => c.id === item.category)?.label} · {money(item.price)}</div>
+              <div style={{ fontSize: 12.5, color: T.ink60 }}>{menuCategories([item])[0]?.label} · {money(item.price)}</div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: T.ink60 }}>
               <input type="checkbox" checked={item.available} onChange={() => toggle(item.id, "available")} /> Available
