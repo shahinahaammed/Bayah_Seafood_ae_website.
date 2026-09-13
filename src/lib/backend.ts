@@ -90,6 +90,47 @@ export async function loadMenu(): Promise<MenuItem[]> {
   return (data ?? []).map(mapMenu);
 }
 
+
+const MENU_IMAGE_BUCKET = "menu-images";
+
+export async function uploadMenuImage(file: File, oldImageUrl?: string) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `menu/${crypto.randomUUID()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(MENU_IMAGE_BUCKET)
+    .upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from(MENU_IMAGE_BUCKET).getPublicUrl(path);
+
+  // Remove the previous uploaded image when it belongs to our bucket.
+  if (oldImageUrl) {
+    const marker = `/storage/v1/object/public/${MENU_IMAGE_BUCKET}/`;
+    const markerIndex = oldImageUrl.indexOf(marker);
+    if (markerIndex !== -1) {
+      const oldPath = oldImageUrl.slice(markerIndex + marker.length).split("?")[0];
+      if (oldPath) {
+        await supabase.storage.from(MENU_IMAGE_BUCKET).remove([oldPath]);
+      }
+    }
+  }
+
+  return data.publicUrl;
+}
+
 export async function upsertMenu(items: MenuItem[]) {
   const payload = items.map((item) => ({ id: item.id, category: item.category, name: item.name, description: item.desc, price: item.price, popular: item.popular, available: item.available, image_url: item.imageUrl ?? null }));
   const { error } = await supabase.from("menu_items").upsert(payload);

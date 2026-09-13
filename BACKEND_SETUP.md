@@ -16,8 +16,9 @@ In **SQL Editor**, run:
 
 1. `supabase/schema.sql`
 2. `supabase/seed.sql`
+3. `supabase/menu_storage.sql`
 
-The schema creates:
+The SQL files create:
 - `profiles` — customer/admin roles
 - `menu_items` — restaurant menu
 - `orders` — customer orders
@@ -86,3 +87,10 @@ Login
 ```
 
 Customers can only read their own orders. Admins can read/update all orders, manage the menu, and view customer accounts. Database Row Level Security enforces these permissions; the frontend is not trusted for authorization.
+
+
+## Menu image uploads
+
+The Admin → Menu Management screen has an **Upload image** button. Images are stored in the Supabase Storage bucket `menu-images` and the public URL is saved in `menu_items.image_url`. Only users with `profiles.role = 'admin'` can upload, replace, or delete images. Customers can view the images.
+
+Run `supabase/menu_storage.sql` once before using the upload button.

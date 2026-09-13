@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pencil, Trash2, PlusCircle } from "lucide-react";
 import { T, CATEGORIES } from "../data/site";
 import { SeaIcon, Pill, Button, Field, FilterChip, inputStyle } from "../components/ui";
 import { money } from "../utils/helpers";
+import { uploadMenuImage } from "../lib/backend";
 import type { CSSProperties } from "react";
 import type { MenuItem } from "../types";
 
@@ -31,12 +32,35 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
   const [form, setForm] = useState<ItemForm>(emptyItemForm());
   const [editing, setEditing] = useState(false);
   const [filterCat, setFilterCat] = useState("all");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startAdd = () => { setForm(emptyItemForm()); setEditing(true); };
   const startEdit = (item: MenuItem) => { setForm({ ...item, imageUrl: item.imageUrl ?? "", price: String(item.price) }); setEditing(true); };
-  const cancel = () => { setForm(emptyItemForm()); setEditing(false); };
+  const cancel = () => {
+    setForm(emptyItemForm());
+    setEditing(false);
+    setImageError("");
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageError("");
+    setUploadingImage(true);
+    try {
+      const imageUrl = await uploadMenuImage(file, form.imageUrl);
+      setForm((current) => ({ ...current, imageUrl }));
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Could not upload the image.");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const submit = () => {
+    if (uploadingImage) return;
     if (!form.name.trim() || !form.price) return;
     const priceNum = parseFloat(form.price);
     if (form.id) {
@@ -79,7 +103,43 @@ export default function AdminMenuManager({ menuItems, saveMenu, deleteMenuItem }
             </Field>
           </div>
           <Field label="Description"><input style={inputStyle} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Short description" /></Field>
-          <Field label="Menu image URL (optional)"><input style={inputStyle} value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." /></Field>
+          <Field label="Menu image">
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => void handleImageUpload(e.target.files?.[0])}
+                style={{ display: "none" }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? "Uploading…" : "Upload image"}
+              </Button>
+              {form.imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, imageUrl: "" })}
+                  style={{ border: "none", background: "transparent", color: T.coralDeep, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                >
+                  Remove image
+                </button>
+              )}
+            </div>
+            {form.imageUrl && (
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                <img src={form.imageUrl} alt="Menu preview" style={{ width: 110, height: 82, objectFit: "cover", borderRadius: 10, border: `1px solid ${T.line}` }} />
+                <span style={{ fontSize: 12, color: T.ink60 }}>JPG, PNG, WEBP or GIF · max 5 MB</span>
+              </div>
+            )}
+            {!form.imageUrl && <div style={{ marginTop: 8, fontSize: 12, color: T.ink60 }}>Upload a food photo. It will be stored in Supabase and shown on the customer menu.</div>}
+            {imageError && <div style={{ marginTop: 8, fontSize: 12.5, color: T.coralDeep }}>{imageError}</div>}
+          </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, alignItems: "end" }} className="tw-3col">
             <Field label="Price (AED)"><input style={inputStyle} type="number" min="0" step="0.5" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0.00" /></Field>
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 14, color: T.ink }}>
